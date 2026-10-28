@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cardiovascular Disease Prediction Dashboard</title>
+<meta name="description" content="Interactive report comparing eight machine learning models that identify patients at high risk of heart disease.">
+<style>
+:root{
+  --navy:#0f2a4a; --canvas:#d6e8fa; --card:#f4f6f9; --ink:#14243a; --muted:#5b6b80; --line:#dfe5ee;
+  --blue:#6fb1ee; --blue2:#2f7fd6; --blue3:#1e5fae; --pink:#e5446d; --teal:#2f9e8a; --amber:#f2b84b; --grey:#9aa8bb;
+  --shadow:0 1px 4px rgba(15,42,74,.18);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#eef3f9;color:var(--ink);font:14px/1.45 "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif}
+button,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--blue3);outline-offset:2px}
+.app{max-width:1240px;margin:0 auto;padding:16px}
+.canvas{background:var(--canvas);border-radius:14px;padding:14px;border:1px solid #bcd6f0}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{width:44px;height:44px;flex:none}
+.brand h1{margin:0;font-size:clamp(17px,2.4vw,24px);letter-spacing:.02em;text-transform:uppercase;color:var(--navy);line-height:1.15}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.slicers{display:flex;gap:10px;flex-wrap:wrap}
+.slicer{background:var(--card);border-radius:8px;padding:5px 10px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-width:140px}
+.slicer label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.slicer select{border:0;background:transparent;font-weight:600;padding:2px 0;cursor:pointer;color:var(--navy)}
+
+/* layout */
+.body{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px}
+.nav{display:flex;flex-direction:column;gap:10px;align-self:start}
+.nav button{border:1.5px solid var(--navy);background:#fff;color:var(--navy);border-radius:10px;padding:12px 10px;font-weight:600;cursor:pointer;text-align:center;box-shadow:var(--shadow)}
+.nav button[aria-current="page"]{background:var(--navy);color:#fff}
+.nav button:hover{background:#eaf2fc}
+.nav button[aria-current="page"]:hover{background:var(--navy)}
+.page[hidden]{display:none}
+
+.card{background:var(--card);border-radius:10px;box-shadow:var(--shadow);padding:12px 14px;min-width:0}
+.card h2{margin:0 0 2px;font-size:13px;font-weight:700;color:var(--navy)}
+.cap{margin:0 0 8px;color:var(--muted);font-size:11.5px}
+.row{display:grid;gap:12px;margin-bottom:12px}
+.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.r3a{grid-template-columns:1.5fr 1fr 1fr}
+.r3b{grid-template-columns:1.25fr 1.25fr 1fr}
+.r2{grid-template-columns:1.4fr 1fr}
+
+/* KPI cards */
+.kpi{position:relative;padding:12px 14px 10px}
+.kl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.kv{font-size:30px;font-weight:700;color:var(--navy);line-height:1.15}
+.ks{font-size:12px;color:var(--muted);margin-bottom:6px;min-height:17px}
+.mini{display:flex;align-items:flex-end;gap:3px;height:30px}
+.mini span{display:block;flex:1;background:#b9d8f6;border-radius:2px 2px 0 0;min-height:3px}
+.mini span.on{background:var(--pink)}
+.kheart{position:absolute;right:12px;top:10px;width:44px;height:44px}
+.kheart svg{display:block;width:44px;height:44px}
+
+/* vertical bars */
+.plotwrap{position:relative;padding-top:6px}
+.plot{display:flex;align-items:flex-end;gap:8px;height:190px;border-bottom:1.5px solid #c5d0de;background:
+  linear-gradient(to top,transparent 24.5%,#e6ebf2 24.5%,#e6ebf2 25%,transparent 25%,transparent 49.5%,#e6ebf2 49.5%,#e6ebf2 50%,transparent 50%,transparent 74.5%,#e6ebf2 74.5%,#e6ebf2 75%,transparent 75%)}
+.vb{position:relative;flex:1;height:100%;min-width:0;background:none;border:0;padding:0;cursor:pointer;border-radius:4px}
+.vb:hover{background:rgba(111,177,238,.15)}
+.vbar{position:absolute;display:block;left:14%;right:14%;bottom:0;background:var(--blue);border-radius:4px 4px 0 0;transition:height .35s ease}
+.vb.best .vbar{background:var(--blue2)}
+.vb.sel .vbar{background:var(--pink)}
+.vv{position:absolute;display:block;left:-4px;right:-4px;text-align:center;font-size:11px;font-weight:600;color:var(--navy)}
+.vnames{display:flex;gap:8px;margin-top:4px}
+.vnames span{flex:1;text-align:center;font-size:11px;color:var(--muted);min-width:0}
+.vnames span.on{color:var(--pink);font-weight:700}
+.axislab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:2px}
+
+/* donuts */
+.donut{display:block;width:150px;height:150px;margin:2px auto 6px}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:center;font-size:12px}
+.leg .li{display:inline-flex;align-items:center;gap:5px;background:none;border:0;padding:0;cursor:default}
+.leg button.li{cursor:pointer}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+
+/* stacked error bars */
+.erow{display:grid;grid-template-columns:92px 1fr 30px;gap:8px;align-items:center;margin:5px 0;background:none;border:0;padding:2px 4px;width:100%;text-align:left;cursor:pointer;border-radius:6px}
+.erow:hover{background:rgba(111,177,238,.15)}
+.erow.sel{background:rgba(229,68,109,.12)}
+.erow .n{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.etrack{display:flex;height:18px;border-radius:4px;overflow:hidden;background:#e9eef5}
+.seg{display:block;height:100%;color:#fff;font-size:11px;font-weight:700;text-align:center;line-height:18px}
+.seg.miss{background:var(--pink)}
+.seg.fa{background:var(--amber);color:#3d2d00}
+.et{font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.keys{display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+
+/* tables / heatmap */
+table{width:100%;border-collapse:separate;border-spacing:2px;font-size:12.5px}
+th{font-weight:600;color:var(--muted);font-size:11px;text-align:center;padding:2px 4px}
+th:first-child,td:first-child{text-align:left}
+th button{background:none;border:0;cursor:pointer;font-weight:600;color:var(--muted);font-size:11px;padding:0}
+th[aria-sort="descending"] button::after{content:" \2193"}
+th[aria-sort="ascending"] button::after{content:" \2191"}
+td{padding:6px 4px;text-align:center;border-radius:4px;font-variant-numeric:tabular-nums}
+td:first-child{padding-left:2px;white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr.sel td:first-child{font-weight:700;color:var(--pink)}
+tbody tr:hover td:first-child{text-decoration:underline}
+.tw{overflow-x:auto}
+table.plain td{background:#fff}
+table.plain td:first-child{background:none}
+
+/* grouped bars */
+.gplot{display:flex;gap:10px;height:210px;align-items:stretch;border-bottom:1.5px solid #c5d0de;padding-top:6px}
+.grp{flex:1;display:flex;align-items:flex-end;gap:2px;min-width:0;background:none;border:0;padding:0 2px;cursor:pointer;border-radius:4px}
+.grp:hover{background:rgba(111,177,238,.15)}
+.grp.sel{background:rgba(229,68,109,.1)}
+.gb{display:block;flex:1;border-radius:3px 3px 0 0;min-width:0}
+.glabs{display:flex;gap:10px;margin-top:4px}
+.glabs span{flex:1;text-align:center;font-size:11px;color:var(--muted)}
+
+/* confusion cards */
+.cmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.cmcard{background:var(--card);border-radius:10px;box-shadow:var(--shadow);padding:10px 12px;border:2px solid transparent;text-align:left;cursor:pointer;width:100%}
+.cmcard.sel{border-color:var(--pink)}
+.cmcard h3{margin:0 0 6px;font-size:13px;color:var(--navy)}
+.cm2{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.cm2 div{border-radius:6px;padding:6px 4px;text-align:center;font-size:18px;font-weight:700;background:#e9eef5}
+.cm2 small{display:block;font-size:10px;font-weight:400;color:var(--muted)}
+.cm2 .ok{box-shadow:inset 0 0 0 1.5px var(--teal)}
+.cm2 .bad{box-shadow:inset 0 0 0 1.5px var(--pink)}
+.cmcard p{margin:6px 0 0;font-size:11.5px;color:var(--muted)}
+
+/* takeaways */
+.tk{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:12px}
+.tk .card h3{margin:0 0 4px;font-size:14px;color:var(--navy)}
+.tk .card p{margin:0;color:var(--ink)}
+.tk .card .tag{display:inline-block;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--blue3);margin-bottom:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips span{background:#e3eefb;color:var(--navy);border-radius:999px;padding:3px 10px;font-size:12px}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:8px 0 0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;background:#e9eef5;border-radius:8px;padding:8px 10px;font-size:12.5px}
+.steps li::before{content:counter(s);display:inline-block;width:20px;height:20px;border-radius:50%;background:var(--navy);color:#fff;text-align:center;line-height:20px;font-size:11px;margin-bottom:4px}
+.steps b{display:block}
+.steps span{color:var(--muted)}
+
+footer{margin-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:12px}
+footer a{color:var(--blue3)}
+
+@media (max-width:1000px){
+  .body{grid-template-columns:1fr}
+  .nav{flex-direction:row;overflow-x:auto;gap:8px}
+  .nav button{flex:1;white-space:nowrap;padding:10px 12px}
+  .r4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .r3a,.r3b,.r2{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr 1fr}
+}
+@media (max-width:520px){
+  .app{padding:8px}
+  .canvas{padding:8px}
+  .steps{grid-template-columns:1fr}
+  .erow{grid-template-columns:78px 1fr 28px}
+}
+@media (prefers-reduced-motion:reduce){.vbar{transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="canvas">
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#cfe3fa"/><path d="M12 19C12 19 5.5 14.4 5.5 10c0-2.2 1.6-3.7 3.5-3.7 1.2 0 2.3.6 3 1.6.7-1 1.8-1.6 3-1.6 1.9 0 3.5 1.5 3.5 3.7C18.5 14.4 12 19 12 19z" fill="#e5446d"/><path d="M7.5 11.3h2.2l1-2 1.6 4 1.1-2h3" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div>
+      <h1>Cardiovascular Disease Prediction Dashboard</h1>
+      <p>Model performance view · 646 patients · 8 machine learning models · Daffodil International University thesis</p>
+    </div>
+  </div>
+  <div class="slicers">
+    <div class="slicer"><label for="metricSel">Metric</label><select id="metricSel"></select></div>
+    <div class="slicer"><label for="famSel">Model family</label><select id="famSel"></select></div>
+  </div>
+</header>
+
+<div class="body">
+  <nav class="nav" aria-label="Report pages">
+    <button type="button" data-page="overview" aria-current="page">Overview</button>
+    <button type="button" data-page="compare">Model Comparison</button>
+    <button type="button" data-page="errors">Error Analysis</button>
+    <button type="button" data-page="takeaways">Key Takeaways</button>
+  </nav>
+
+  <main>
+    <!-- PAGE 1 -->
+    <section class="page" id="p-overview" aria-label="Overview">
+      <div class="row r4">
+        <div class="card kpi"><div class="kl">Patients analysed</div><div class="kv" id="k1v">—</div><div class="ks" id="k1s"></div><div class="mini" aria-hidden="true" id="k1m"></div></div>
+        <div class="card kpi">
+          <div class="kheart"><svg viewBox="0 0 24 24" role="img" aria-label="Heart filled to the best accuracy"><defs><clipPath id="hc"><path d="M12 21C12 21 3 14.6 3 8.6 3 5.5 5.3 3.5 7.9 3.5c1.6 0 3.1.8 4.1 2.2 1-1.4 2.5-2.2 4.1-2.2 2.6 0 4.9 2 4.9 5.1C21 14.6 12 21 12 21z"/></clipPath></defs><rect x="0" y="0" width="24" height="24" fill="#dbe4ef" clip-path="url(#hc)"/><rect id="hfill" x="0" y="21" width="24" height="3" fill="#e5446d" clip-path="url(#hc)"/><path d="M12 21C12 21 3 14.6 3 8.6 3 5.5 5.3 3.5 7.9 3.5c1.6 0 3.1.8 4.1 2.2 1-1.4 2.5-2.2 4.1-2.2 2.6 0 4.9 2 4.9 5.1C21 14.6 12 21 12 21z" fill="none" stroke="#e5446d" stroke-width="1"/></svg></div>
+          <div class="kl">Best accuracy</div><div class="kv" id="k2v">—</div><div class="ks" id="k2s"></div><div class="mini" aria-hidden="true" id="k2m"></div>
+        </div>
+        <div class="card kpi"><div class="kl">Best recall</div><div class="kv" id="k3v">—</div><div class="ks" id="k3s"></div><div class="mini" aria-hidden="true" id="k3m"></div></div>
+        <div class="card kpi"><div class="kl">Best F1 score</div><div class="kv" id="k4v">—</div><div class="ks" id="k4s"></div><div class="mini" aria-hidden="true" id="k4m"></div></div>
+      </div>
+
+      <div class="row r3a">
+        <div class="card">
+          <h2 id="vTitle">Accuracy by model</h2>
+          <p class="cap" id="vCap"></p>
+          <div class="plotwrap"><div class="plot" id="plot"></div><div class="vnames" id="vnames"></div></div>
+          <div class="axislab"><span>Gridlines at 25%, 50%, 75%</span><span>Axis starts at 0%</span></div>
+        </div>
+        <div class="card">
+          <h2>Patients by diagnosis</h2>
+          <p class="cap">All 646 patient records in the dataset.</p>
+          <div id="pieDiag"></div>
+        </div>
+        <div class="card">
+          <h2 id="pieOutT">Test-set outcome</h2>
+          <p class="cap" id="pieOutCap"></p>
+          <div id="pieOut"></div>
+        </div>
+      </div>
+
+      <div class="row r3b">
+        <div class="card">
+          <h2>Errors by model</h2>
+          <p class="cap">Out of 130 test patients. Fewer is better.</p>
+          <div id="errBars"></div>
+          <div class="keys"><span><i class="dot" style="background:var(--pink)"></i> Missed heart disease</span><span><i class="dot" style="background:var(--amber)"></i> False alarm</span></div>
+        </div>
+        <div class="card">
+          <h2>Scores heatmap</h2>
+          <p class="cap">Darker blue means a higher score in that column.</p>
+          <div class="tw"><table id="heat"></table></div>
+        </div>
+        <div class="card">
+          <h2>Model families</h2>
+          <p class="cap">Click a slice to filter the report.</p>
+          <div id="pieFam"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 2 -->
+    <section class="page" id="p-compare" aria-label="Model comparison" hidden>
+      <div class="row">
+        <div class="card">
+          <h2>All metrics by model</h2>
+          <p class="cap">Heart-disease class. Click a model to select it across the report.</p>
+          <div class="gplot" id="gplot"></div>
+          <div class="glabs" id="glabs"></div>
+          <div class="keys" id="gleg"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <h2>Results table</h2>
+          <p class="cap">Click a column heading to sort.</p>
+          <div class="tw"><table class="plain" id="tbl"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 3 -->
+    <section class="page" id="p-errors" aria-label="Error analysis" hidden>
+      <div class="row">
+        <div class="card">
+          <h2>Confusion matrix for every model</h2>
+          <p class="cap" id="errCap"></p>
+          <div class="cmgrid" id="errGrid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 4 -->
+    <section class="page" id="p-takeaways" aria-label="Key takeaways" hidden>
+      <div class="tk" id="tkList"></div>
+      <div class="row">
+        <div class="card">
+          <h2>About the data</h2>
+          <p class="cap" id="dataCap"></p>
+          <div class="chips" id="featChips"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <h2>How the project worked</h2>
+          <ol class="steps">
+            <li><b>Clinical data</b><span>646 patient records, 11 features</span></li>
+            <li><b>Explore</b><span>Distributions, correlations and class balance</span></li>
+            <li><b>Prepare</b><span>Encoded categories, standardised features, 80/20 split</span></li>
+            <li><b>Model</b><span>8 classifiers trained and compared</span></li>
+            <li><b>Report</b><span>Thesis report and class presentation on key risk factors</span></li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer>
+  <span>Built by Anasua Mazumder · Master of Data Science, Charles Darwin University</span>
+  <span><a href="https://github.com/anasua2905/Cardiovascular-disease-prediction_thesis" target="_blank" rel="noopener">View the code on GitHub</a></span>
+</footer>
+</div>
+</div>
+
+<script>
+/* ============================================================
+   RESULTS. Taken from cardiovascular_disease.ipynb (test set: 130 patients,
+   80/20 split, random_state = 0). Values are percentages (92.3 = 92.3%).
+   Precision, recall and F1 are for the "heart disease" class.
+   cm = confusion matrix [true normal, false alarm, missed case, true heart disease].
+   ROC-AUC was not computed in the notebook, so it stays null.
+   ============================================================ */
+const DATASET = { patients: 646, features: 11, train: 516, test: 130, heartDisease: 381, normal: 265 };
+const DATA = [
+  { model: "Logistic Regression", family: "Linear / margin", accuracy: 88.5, precision: 88.2, recall: 93.8, f1: 90.9, auc: null, cm: [40, 10, 5, 75] },
+  { model: "Naive Bayes",         family: "Other",           accuracy: 90.8, precision: 89.5, recall: 96.2, f1: 92.8, auc: null, cm: [41, 9, 3, 77] },
+  { model: "Random Forest",       family: "Tree-based",      accuracy: 92.3, precision: 89.8, recall: 98.8, f1: 94.0, auc: null, cm: [41, 9, 1, 79] },
+  { model: "XGBoost",             family: "Tree-based",      accuracy: 89.2, precision: 89.3, recall: 93.8, f1: 91.5, auc: null, cm: [41, 9, 5, 75] },
+  { model: "KNN",                 family: "Other",           accuracy: 91.5, precision: 91.6, recall: 95.0, f1: 93.3, auc: null, cm: [43, 7, 4, 76] },
+  { model: "Decision Tree",       family: "Tree-based",      accuracy: 89.2, precision: 91.2, recall: 91.2, f1: 91.2, auc: null, cm: [43, 7, 7, 73] },
+  { model: "SVM",                 family: "Linear / margin", accuracy: 89.2, precision: 88.4, recall: 95.0, f1: 91.6, auc: null, cm: [40, 10, 4, 76] },
+  { model: "LightGBM",            family: "Tree-based",      accuracy: 90.0, precision: 89.4, recall: 95.0, f1: 92.1, auc: null, cm: [41, 9, 4, 76] }
+];
+const FEATURES = ["Age", "Sex", "Chest pain type", "Blood pressure", "Cholesterol", "Blood glucose", "Resting ECG", "Max heart rate", "Exercise angina", "Oldpeak", "ST slope"];
+/* ============================================================ */
+
+const METRICS = [
+  { key: "accuracy",  label: "Accuracy" },
+  { key: "precision", label: "Precision" },
+  { key: "recall",    label: "Recall" },
+  { key: "f1",        label: "F1 score" },
+  { key: "auc",       label: "ROC-AUC" }
+];
+const SHORT = { "Logistic Regression": "LR", "Naive Bayes": "NB", "Random Forest": "RF", "XGBoost": "XGB", "KNN": "KNN", "Decision Tree": "DT", "SVM": "SVM", "LightGBM": "LGBM" };
+const sh = n => SHORT[n] || n.slice(0, 4);
+const MCOLOR = { accuracy: "#1e5fae", precision: "#6fb1ee", recall: "#e5446d", f1: "#f2b84b", auc: "#2f9e8a" };
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+const NS = "http://www.w3.org/2000/svg";
+const sv = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; return e; };
+const fmt = v => v == null ? "—" : (Math.round(v * 10) / 10).toFixed(1) + "%";
+const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+const hasMetric = k => DATA.some(d => d[k] != null);
+const metricsOn = () => METRICS.filter(m => hasMetric(m.key));
+const mLabel = k => METRICS.find(m => m.key === k).label;
+
+const state = { page: "overview", metric: "accuracy", family: "All", selected: null, sortKey: "accuracy", sortDir: "desc" };
+
+function bestBy(key, list) {
+  let b = null;
+  list.forEach(d => { if (d[key] != null && (b === null || d[key] > b[key])) b = d; });
+  return b;
+}
+function models() {
+  const k = state.metric;
+  return DATA.filter(d => state.family === "All" || d.family === state.family).slice().sort((a, b) => {
+    const av = a[k] == null ? -1 : a[k], bv = b[k] == null ? -1 : b[k];
+    return bv - av || a.model.localeCompare(b.model);
+  });
+}
+const selectedModel = () => DATA.find(d => d.model === state.selected);
+
+/* ---------- slicers and navigation ---------- */
+function initSlicers() {
+  const ms = $("metricSel");
+  metricsOn().forEach(m => { const o = el("option", null, m.label); o.value = m.key; ms.appendChild(o); });
+  ms.addEventListener("change", () => { state.metric = ms.value; state.sortKey = ms.value; state.sortDir = "desc"; renderAll(); });
+  const fs = $("famSel");
+  ["All"].concat(Array.from(new Set(DATA.map(d => d.family)))).forEach(f => { const o = el("option", null, f === "All" ? "All families" : f); o.value = f; fs.appendChild(o); });
+  fs.addEventListener("change", () => { state.family = fs.value; renderAll(); });
+  document.querySelectorAll(".nav button").forEach(b => b.addEventListener("click", () => { state.page = b.dataset.page; renderPageVisibility(); }));
+}
+function renderPageVisibility() {
+  document.querySelectorAll(".page").forEach(p => { p.hidden = p.id !== "p-" + state.page; });
+  document.querySelectorAll(".nav button").forEach(b => { if (b.dataset.page === state.page) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+}
+function select(name) { state.selected = name; renderAll(); }
+
+/* ---------- KPI cards ---------- */
+function setKpi(n, key, list) {
+  const best = bestBy(key, list);
+  $("k" + n + "v").textContent = best ? fmt(best[key]) : "—";
+  $("k" + n + "s").textContent = best ? best.model : "";
+  const box = $("k" + n + "m"); box.textContent = "";
+  const vals = list.map(d => d[key]).filter(v => v != null);
+  const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+  list.forEach(d => {
+    const v = d[key]; if (v == null) return;
+    const s = el("span", d === best ? "on" : "");
+    s.style.height = (30 + 70 * (v - lo) / ((hi - lo) || 1)) + "%";
+    box.appendChild(s);
+  });
+}
+function renderKPIs() {
+  const list = models();
+  $("k1v").textContent = DATASET.patients;
+  $("k1s").textContent = DATASET.features + " clinical features · " + DATASET.test + " test cases";
+  const k1 = $("k1m"); k1.textContent = "";
+  [DATASET.heartDisease, DATASET.normal].forEach((v, i) => { const s = el("span", i === 0 ? "on" : ""); s.style.height = (v / DATASET.patients * 100) + "%"; k1.appendChild(s); });
+  setKpi(2, "accuracy", list); setKpi(3, "recall", list); setKpi(4, "f1", list);
+  const b = bestBy("accuracy", list);
+  const y = 21 - Math.max(0, Math.min(100, b ? b.accuracy : 0)) / 100 * 17.5;
+  $("hfill").setAttribute("y", y); $("hfill").setAttribute("height", 24 - y);
+}
+
+/* ---------- vertical bars ---------- */
+function renderBars() {
+  const list = models(), k = state.metric, best = bestBy(k, list);
+  $("vTitle").textContent = mLabel(k) + " by model";
+  $("vCap").textContent = "Selected: " + state.selected + ". Click a bar to cross-filter the other charts.";
+  const plot = $("plot"), names = $("vnames");
+  plot.textContent = ""; names.textContent = "";
+  list.forEach(d => {
+    const v = d[k], sel = d.model === state.selected;
+    const b = el("button", "vb" + (sel ? " sel" : "") + (d === best ? " best" : ""));
+    b.type = "button"; b.title = d.model + ": " + fmt(v);
+    b.setAttribute("aria-label", d.model + ", " + mLabel(k) + " " + fmt(v));
+    const bar = el("span", "vbar"); bar.style.height = (v || 0) + "%";
+    const lab = el("span", "vv", v == null ? "—" : v.toFixed(1)); lab.style.bottom = "calc(" + (v || 0) + "% + 2px)";
+    b.appendChild(bar); b.appendChild(lab);
+    b.addEventListener("click", () => select(d.model));
+    plot.appendChild(b);
+    names.appendChild(el("span", sel ? "on" : "", sh(d.model)));
+  });
+}
+
+/* ---------- donuts ---------- */
+function donut(box, slices, center, sub, aria) {
+  box.textContent = "";
+  const total = slices.reduce((s, x) => s + x.value, 0);
+  const R = 44, C = 2 * Math.PI * R;
+  const svg = sv("svg", { viewBox: "0 0 120 120", role: "img", "aria-label": aria, class: "donut" });
+  svg.appendChild(sv("circle", { cx: 60, cy: 60, r: R, fill: "none", stroke: "#e3e8ef", "stroke-width": 18 }));
+  let off = 0;
+  slices.forEach(s => {
+    if (!s.value || !total) return;
+    const len = s.value / total * C;
+    const c = sv("circle", { cx: 60, cy: 60, r: R, fill: "none", stroke: s.color, "stroke-width": 18, "stroke-dasharray": len + " " + (C - len), "stroke-dashoffset": -off, transform: "rotate(-90 60 60)" });
+    c.appendChild(sv("title", {}, s.label + ": " + s.text));
+    if (s.dim) c.style.opacity = ".3";
+    if (s.onClick) { c.style.cursor = "pointer"; c.addEventListener("click", s.onClick); }
+    svg.appendChild(c);
+    off += len;
+  });
+  svg.appendChild(sv("text", { x: 60, y: 57, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 17, "font-weight": 700, fill: "#0f2a4a" }, center));
+  svg.appendChild(sv("text", { x: 60, y: 73, "text-anchor": "middle", "dominant-baseline": "central", "font-size": 7.5, fill: "#5b6b80" }, sub));
+  box.appendChild(svg);
+  const leg = el("div", "leg");
+  slices.forEach(s => {
+    const it = el(s.onClick ? "button" : "span", "li");
+    if (s.onClick) { it.type = "button"; it.addEventListener("click", s.onClick); }
+    const d = el("i", "dot"); d.style.background = s.color;
+    it.appendChild(d); it.appendChild(el("span", null, s.label + " · " + s.text));
+    if (s.dim) it.style.opacity = ".5";
+    leg.appendChild(it);
+  });
+  box.appendChild(leg);
+}
+function renderDonuts() {
+  const pc = (a, b) => (Math.round(a / b * 1000) / 10) + "%";
+  donut($("pieDiag"), [
+    { label: "Heart disease", value: DATASET.heartDisease, color: "#e5446d", text: DATASET.heartDisease + " (" + pc(DATASET.heartDisease, DATASET.patients) + ")" },
+    { label: "Normal", value: DATASET.normal, color: "#6fb1ee", text: DATASET.normal + " (" + pc(DATASET.normal, DATASET.patients) + ")" }
+  ], String(DATASET.patients), "patients", "Donut chart of patients with and without heart disease");
+
+  const d = selectedModel();
+  $("pieOutT").textContent = "Test-set outcome · " + (d ? d.model : "");
+  if (d && d.cm) {
+    const [tn, fp, fn, tp] = d.cm;
+    $("pieOutCap").textContent = "How " + (tn + fp + fn + tp) + " held-out test patients were classified.";
+    donut($("pieOut"), [
+      { label: "Caught", value: tp, color: "#2f9e8a", text: tp },
+      { label: "Cleared", value: tn, color: "#6fb1ee", text: tn },
+      { label: "False alarm", value: fp, color: "#f2b84b", text: fp },
+      { label: "Missed", value: fn, color: "#e5446d", text: fn }
+    ], fmt(d.accuracy), "accuracy", "Donut chart of the test-set outcome");
+  } else {
+    $("pieOutCap").textContent = "Confusion matrix not available for this model.";
+    $("pieOut").textContent = "";
+  }
+
+  const fams = Array.from(new Set(DATA.map(x => x.family))), cols = ["#e5446d", "#2f7fd6", "#9aa8bb"];
+  donut($("pieFam"), fams.map((f, i) => {
+    const n = DATA.filter(x => x.family === f).length;
+    return { label: f, value: n, color: cols[i % cols.length], text: plural(n, "model"), dim: state.family !== "All" && state.family !== f,
+      onClick: () => { state.family = state.family === f ? "All" : f; $("famSel").value = state.family; renderAll(); } };
+  }), String(DATA.length), "models", "Donut chart of model families");
+}
+
+/* ---------- stacked error bars ---------- */
+function renderErrors() {
+  const box = $("errBars"); box.textContent = "";
+  const list = models().filter(d => d.cm);
+  const max = Math.max.apply(null, list.map(d => d.cm[1] + d.cm[2]).concat([1]));
+  list.forEach(d => {
+    const fp = d.cm[1], fn = d.cm[2];
+    const r = el("button", "erow" + (d.model === state.selected ? " sel" : "")); r.type = "button";
+    r.setAttribute("aria-label", d.model + ": " + plural(fn, "missed case") + ", " + plural(fp, "false alarm"));
+    r.appendChild(el("span", "n", d.model));
+    const t = el("span", "etrack");
+    const a = el("span", "seg miss", fn ? String(fn) : ""); a.style.width = (fn / max * 100) + "%";
+    const b = el("span", "seg fa", fp ? String(fp) : ""); b.style.width = (fp / max * 100) + "%";
+    t.appendChild(a); t.appendChild(b); r.appendChild(t);
+    r.appendChild(el("span", "et", String(fp + fn)));
+    r.addEventListener("click", () => select(d.model));
+    box.appendChild(r);
+  });
+}
+
+/* ---------- heatmap and table ---------- */
+const mix = (a, b, t) => a.map((x, i) => Math.round(x + (b[i] - x) * t));
+function heatColor(t) { return "rgb(" + mix([232, 242, 253], [47, 127, 214], t).join(",") + ")"; }
+function renderHeat() {
+  const tb = $("heat"); tb.textContent = "";
+  const cols = metricsOn(), list = models();
+  const head = el("tr"); head.appendChild(el("th", null, "Model"));
+  cols.forEach(c => head.appendChild(el("th", null, c.label)));
+  const th = el("thead"); th.appendChild(head); tb.appendChild(th);
+  const range = {};
+  cols.forEach(c => { const v = DATA.map(d => d[c.key]).filter(x => x != null); range[c.key] = [Math.min.apply(null, v), Math.max.apply(null, v)]; });
+  const body = el("tbody");
+  list.forEach(d => {
+    const tr = el("tr", d.model === state.selected ? "sel" : "");
+    tr.appendChild(el("td", null, d.model));
+    cols.forEach(c => {
+      const v = d[c.key], [lo, hi] = range[c.key], t = v == null ? 0 : (v - lo) / ((hi - lo) || 1);
+      const td = el("td", null, v == null ? "—" : v.toFixed(1));
+      td.style.background = heatColor(t); td.style.color = t > .55 ? "#fff" : "#14243a";
+      if (v != null && v === hi) td.style.fontWeight = "700";
+      tr.appendChild(td);
+    });
+    tr.addEventListener("click", () => select(d.model));
+    body.appendChild(tr);
+  });
+  tb.appendChild(body);
+}
+function renderCompare() {
+  const cols = metricsOn().filter(m => m.key !== "auc" || true), list = models();
+  const gp = $("gplot"), gl = $("glabs"); gp.textContent = ""; gl.textContent = "";
+  list.forEach(d => {
+    const g = el("button", "grp" + (d.model === state.selected ? " sel" : "")); g.type = "button";
+    g.title = d.model + " · " + cols.map(c => c.label + " " + fmt(d[c.key])).join(" · ");
+    g.setAttribute("aria-label", g.title);
+    cols.forEach(c => { if (d[c.key] == null) return; const b = el("span", "gb"); b.style.height = d[c.key] + "%"; b.style.background = MCOLOR[c.key]; g.appendChild(b); });
+    g.addEventListener("click", () => select(d.model));
+    gp.appendChild(g);
+    gl.appendChild(el("span", null, sh(d.model)));
+  });
+  const leg = $("gleg"); leg.textContent = "";
+  cols.forEach(c => { if (!hasMetric(c.key)) return; const s = el("span"); const dt = el("i", "dot"); dt.style.background = MCOLOR[c.key]; s.appendChild(dt); s.appendChild(document.createTextNode(" " + c.label)); leg.appendChild(s); });
+
+  const tb = $("tbl"); tb.textContent = "";
+  const heads = [{ key: "model", label: "Model" }, { key: "family", label: "Family" }].concat(cols);
+  const hr = el("tr");
+  heads.forEach(h => {
+    const th = el("th"); th.scope = "col";
+    if (state.sortKey === h.key) th.setAttribute("aria-sort", state.sortDir === "asc" ? "ascending" : "descending");
+    const b = el("button", null, h.label); b.type = "button";
+    b.addEventListener("click", () => { state.sortDir = state.sortKey === h.key && state.sortDir === "desc" ? "asc" : "desc"; state.sortKey = h.key; renderCompare(); });
+    th.appendChild(b); hr.appendChild(th);
+  });
+  const thead = el("thead"); thead.appendChild(hr); tb.appendChild(thead);
+  const s = state.sortDir === "asc" ? 1 : -1;
+  const rows = list.slice().sort((a, b) => {
+    const av = a[state.sortKey], bv = b[state.sortKey];
+    if (typeof av === "string" || typeof bv === "string") return s * String(av).localeCompare(String(bv));
+    if (av == null) return 1; if (bv == null) return -1;
+    return s * (av - bv);
+  });
+  const body = el("tbody");
+  rows.forEach(d => {
+    const tr = el("tr", d.model === state.selected ? "sel" : "");
+    tr.appendChild(el("td", null, d.model)); tr.appendChild(el("td", null, d.family));
+    cols.forEach(c => { const td = el("td", null, d[c.key] == null ? "—" : d[c.key].toFixed(1) + "%"); if (d === bestBy(c.key, DATA)) td.style.fontWeight = "700"; tr.appendChild(td); });
+    tr.addEventListener("click", () => select(d.model));
+    body.appendChild(tr);
+  });
+  tb.appendChild(body);
+}
+
+/* ---------- error analysis page ---------- */
+function renderErrPage() {
+  const g = $("errGrid"); g.textContent = "";
+  const list = models().filter(d => d.cm).sort((a, b) => a.cm[2] - b.cm[2] || a.cm[1] - b.cm[1]);
+  $("errCap").textContent = "Sorted by fewest missed cases first. Green outlines are correct decisions, pink are errors. Missed heart disease is the more serious error.";
+  list.forEach(d => {
+    const [tn, fp, fn, tp] = d.cm;
+    const c = el("button", "cmcard" + (d.model === state.selected ? " sel" : "")); c.type = "button";
+    c.appendChild(el("h3", null, d.model));
+    const m = el("div", "cm2");
+    [[tn, "cleared", "ok"], [fp, "false alarm", "bad"], [fn, "missed", "bad"], [tp, "caught", "ok"]].forEach(x => {
+      const cell = el("div", x[2], String(x[0])); cell.appendChild(el("small", null, x[1])); m.appendChild(cell);
+    });
+    c.appendChild(m);
+    c.appendChild(el("p", null, "Caught " + tp + " of " + (tp + fn) + " patients with heart disease; " + plural(fp, "false alarm") + "."));
+    c.addEventListener("click", () => select(d.model));
+    g.appendChild(c);
+  });
+}
+
+/* ---------- takeaways page ---------- */
+function renderTakeaways() {
+  const all = DATA, n = all.length;
+  const bA = bestBy("accuracy", all), bR = bestBy("recall", all), bF = bestBy("f1", all);
+  const lowA = all.reduce((m, d) => d.accuracy < m.accuracy ? d : m);
+  const lean = all.filter(d => d.cm && d.cm[1] > d.cm[2]).length;
+  const onePt = (100 / DATASET.test).toFixed(1);
+  const items = [];
+  items.push(["Best overall", bA.model + " leads on accuracy",
+    bA.model + " has the highest accuracy at " + fmt(bA.accuracy) + (bF === bA ? " and the highest F1 score at " + fmt(bF.f1) : "") + ". It caught " + bA.cm[3] + " of " + (bA.cm[3] + bA.cm[2]) + " patients with heart disease and raised " + plural(bA.cm[1], "false alarm") + "."]);
+  items.push(["Safety first", bR.model + " misses the fewest patients",
+    "Highest recall is " + fmt(bR.recall) + " (" + bR.model + "), meaning it missed only " + plural(bR.cm[2], "patient") + " with heart disease. For a screening task, missed cases matter more than false alarms."]);
+  items.push(["A close race", "Scores sit between " + fmt(lowA.accuracy) + " and " + fmt(bA.accuracy),
+    "The gap between best and worst accuracy is " + (bA.accuracy - lowA.accuracy).toFixed(1) + " points. With only " + DATASET.test + " test patients, one patient is worth about " + onePt + " points, so small gaps between models should be read with care."]);
+  items.push(["Error pattern", lean + " of " + n + " models lean toward false alarms",
+    "Most models raise more false alarms than missed cases. That is the safer direction for flagging high-risk patients, though each false alarm still means extra checks."]);
+  items.push(["The data", Math.round(DATASET.heartDisease / DATASET.patients * 1000) / 10 + "% of patients have heart disease",
+    DATASET.heartDisease + " of " + DATASET.patients + " patients have heart disease, a mild imbalance. The data was split " + DATASET.train + " for training and " + DATASET.test + " for testing."]);
+  items.push(["Worth adding next", "Cross-validation and ROC-AUC",
+    "Results come from a single train and test split, and ROC-AUC was not calculated. Repeating the comparison with cross-validation would show whether the ranking holds."]);
+  const box = $("tkList"); box.textContent = "";
+  items.forEach(it => {
+    const c = el("div", "card"); c.appendChild(el("div", "tag", it[0])); c.appendChild(el("h3", null, it[1])); c.appendChild(el("p", null, it[2])); box.appendChild(c);
+  });
+  $("dataCap").textContent = "Each patient has " + FEATURES.length + " clinical features plus the outcome (heart disease or normal).";
+  const ch = $("featChips"); ch.textContent = "";
+  FEATURES.forEach(f => ch.appendChild(el("span", null, f)));
+}
+
+/* ---------- main ---------- */
+function renderAll() {
+  const list = models();
+  if (!state.selected || !list.some(d => d.model === state.selected)) {
+    const b = bestBy(state.metric, list) || list[0];
+    state.selected = b.model;
+  }
+  renderKPIs(); renderBars(); renderDonuts(); renderErrors(); renderHeat(); renderCompare(); renderErrPage(); renderTakeaways();
+  renderPageVisibility();
+}
+initSlicers();
+renderAll();
+</script>
+</body>
+</html>
